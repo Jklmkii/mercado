@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Supermercado Online</title>
+
   <style>
     body {
       font-family: Arial;
       background: #f4f4f4;
       text-align: center;
     }
+
     .container {
       background: white;
       padding: 20px;
@@ -16,6 +19,13 @@
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+
+    input {
+      width: 90%;
+      padding: 8px;
+      margin: 5px;
+    }
+
     button {
       background: green;
       color: white;
@@ -23,35 +33,46 @@
       padding: 10px;
       margin-top: 10px;
       cursor: pointer;
+      width: 95%;
+    }
+
+    #adminPanel, #userPanel {
+      display: none;
+      text-align: left;
     }
   </style>
 </head>
+
 <body>
 
 <div class="container">
   <h2>🛒 Supermercado</h2>
 
-  <input type="email" id="email" placeholder="Email"><br><br>
-  <input type="password" id="password" placeholder="Senha"><br>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Senha">
 
   <button onclick="login()">Entrar</button>
+  <button onclick="loginGoogle()">Entrar com Google</button>
 </div>
 
-<div class="container" id="adminPanel" style="display:none;">
+<div class="container" id="adminPanel">
   <h3>📦 Painel do Gerente</h3>
-  <p>Lista de Produtos:</p>
   <pre id="adminData"></pre>
 </div>
 
-<div class="container" id="userPanel" style="display:none;">
+<div class="container" id="userPanel">
   <h3>🧾 Meu Carrinho</h3>
   <pre id="userData"></pre>
 </div>
 
 <script type="module">
+
+// 🔥 IMPORTS CORRETOS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } 
+from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+import { getDatabase, ref, get, set } 
+from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCEOYP12PL2UA319L5XC0O6vZWWDJ-72BM",
@@ -63,38 +84,78 @@ const firebaseConfig = {
   appId: "1:530109759030:web:a561931592025fdafb6297"
 };
 
+// 🚀 INICIALIZAÇÃO
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getDatabase();
 
-window.login = function() {
+// 🔐 LOGIN NORMAL
+window.login = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  signInWithEmailAndPassword(auth, email, password)
-    .then(async (userCredential) => {
-      const user = userCredential.user;
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    carregarDados(userCredential.user.uid);
+  } catch (err) {
+    console.error(err);
+    alert("Erro no login");
+  }
+};
 
-      const snapshot = await get(ref(db, 'users/' + user.uid));
-      const data = snapshot.val();
+// 🌐 LOGIN COM GOOGLE
+window.loginGoogle = async function() {
+  const provider = new GoogleAuthProvider();
 
-      if (data.role === "admin") {
-        document.getElementById("adminPanel").style.display = "block";
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
 
-        const adminSnap = await get(ref(db, 'admin-data/products'));
-        document.getElementById("adminData").innerText =
-          JSON.stringify(adminSnap.val(), null, 2);
+    const userRef = ref(db, 'users/' + user.uid);
+    const snapshot = await get(userRef);
 
-      } else {
-        document.getElementById("userPanel").style.display = "block";
+    // cria usuário se não existir
+    if (!snapshot.exists()) {
+      await set(userRef, {
+        email: user.email,
+        role: "user"
+      });
+    }
 
-        const userSnap = await get(ref(db, 'user-data/' + user.uid + '/cart'));
-        document.getElementById("userData").innerText =
-          JSON.stringify(userSnap.val(), null, 2);
-      }
-    })
-    .catch(err => console.error(err));
+    carregarDados(user.uid);
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro no login com Google");
+  }
+};
+
+// 🧠 CARREGA DADOS BASEADO NO CARGO
+async function carregarDados(uid) {
+  const snap = await get(ref(db, 'users/' + uid));
+  const data = snap.val();
+
+  if (!data) {
+    alert("Usuário sem role definido");
+    return;
+  }
+
+  if (data.role === "admin") {
+    document.getElementById("adminPanel").style.display = "block";
+
+    const adminSnap = await get(ref(db, 'admin-data/products'));
+    document.getElementById("adminData").innerText =
+      JSON.stringify(adminSnap.val(), null, 2);
+
+  } else {
+    document.getElementById("userPanel").style.display = "block";
+
+    const userSnap = await get(ref(db, 'user-data/' + uid + '/cart'));
+    document.getElementById("userData").innerText =
+      JSON.stringify(userSnap.val(), null, 2);
+  }
 }
+
 </script>
 
 </body>

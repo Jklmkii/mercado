@@ -1,0 +1,31 @@
+{
+  "users": {
+    "2OWfbWB5HPTS79qoLTLovBqLJMr2": {
+      "name": "Cliente",
+      "role": "user"
+    },
+    "1s5E1Y0UaVcxmsknomxV4L3unT93": {
+      "name": "Gerente",
+      "role": "admin"
+    }
+  },
+  "admin-data": {
+    "products": {
+      "prod1": {
+        "name": "Arroz",
+        "price": 20
+      },
+      "prod2": {
+        "name": "Feijão",
+        "price": 10
+      }
+    }
+  },
+  "user-data": {
+    "2OWfbWB5HPTS79qoLTLovBqLJMr2": {
+      "cart": {
+        "prod1": 2
+      }
+    }
+  }
+}
