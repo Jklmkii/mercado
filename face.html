@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Supermercado Online</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      text-align: center;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      margin: 20px auto;
+      width: 300px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: green;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🛒 Supermercado</h2>
+
+  <input type="email" id="email" placeholder="Email"><br><br>
+  <input type="password" id="password" placeholder="Senha"><br>
+
+  <button onclick="login()">Entrar</button>
+</div>
+
+<div class="container" id="adminPanel" style="display:none;">
+  <h3>📦 Painel do Gerente</h3>
+  <p>Lista de Produtos:</p>
+  <pre id="adminData"></pre>
+</div>
+
+<div class="container" id="userPanel" style="display:none;">
+  <h3>🧾 Meu Carrinho</h3>
+  <pre id="userData"></pre>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+const firebaseConfig = {
+  // SUA CONFIG AQUI
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getDatabase();
+
+window.login = function() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(async (userCredential) => {
+      const user = userCredential.user;
+
+      const snapshot = await get(ref(db, 'users/' + user.uid));
+      const data = snapshot.val();
+
+      if (data.role === "admin") {
+        document.getElementById("adminPanel").style.display = "block";
+
+        const adminSnap = await get(ref(db, 'admin-data/products'));
+        document.getElementById("adminData").innerText =
+          JSON.stringify(adminSnap.val(), null, 2);
+
+      } else {
+        document.getElementById("userPanel").style.display = "block";
+
+        const userSnap = await get(ref(db, 'user-data/' + user.uid + '/cart'));
+        document.getElementById("userData").innerText =
+          JSON.stringify(userSnap.val(), null, 2);
+      }
+    })
+    .catch(err => console.error(err));
+}
+</script>
+
+</body>
+</html>
